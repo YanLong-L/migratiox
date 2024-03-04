@@ -2,24 +2,23 @@ package fixer
 
 import (
 	"context"
-	"github.com/YanLong-L/migratiox/migrator"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type OverrideFixer[T migrator.Entity] struct {
+type OverrideFixer struct {
 	// 因为本身其实这个不涉及什么领域对象，
 	// 这里操作的不是 migrator 本身的领域对象
 	base    *gorm.DB
 	target  *gorm.DB
 	columns []string
+	Table   string
 }
 
-func NewOverrideFixer[T migrator.Entity](base *gorm.DB,
-	target *gorm.DB) (*OverrideFixer[T], error) {
+func NewOverrideFixer(base *gorm.DB,
+	target *gorm.DB) (*OverrideFixer, error) {
 	// 在这里需要查询一下数据库中究竟有哪些列
-	var t T
-	rows, err := base.Model(&t).Limit(1).Rows()
+	rows, err := base.Table("").Limit(1).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -27,17 +26,18 @@ func NewOverrideFixer[T migrator.Entity](base *gorm.DB,
 	if err != nil {
 		return nil, err
 	}
-	return &OverrideFixer[T]{
+	return &OverrideFixer{
 		base:    base,
 		target:  target,
 		columns: columns,
+		Table:   "",
 	}, nil
 }
 
-func (o *OverrideFixer[T]) Fix(ctx context.Context, id int64) error {
-	var src T
+func (o *OverrideFixer) Fix(ctx context.Context, id int64) error {
+	var src map[string]interface{}
 	// 找出数据
-	err := o.base.WithContext(ctx).Where("id = ?", id).
+	err := o.base.WithContext(ctx).Table("").Where("id = ?", id).
 		First(&src).Error
 	switch err {
 	// 找到了数据

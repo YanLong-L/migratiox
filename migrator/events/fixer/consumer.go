@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/IBM/sarama"
 	"github.com/YanLong-L/migratiox/logger"
-	"github.com/YanLong-L/migratiox/migrator"
 	"github.com/YanLong-L/migratiox/migrator/events"
 	"github.com/YanLong-L/migratiox/migrator/fixer"
 	"github.com/YanLong-L/migratiox/saramax"
@@ -13,29 +12,29 @@ import (
 	"time"
 )
 
-type Consumer[T migrator.Entity] struct {
+type Consumer struct {
 	client   sarama.Client
 	l        logger.Logger
-	srcFirst *fixer.OverrideFixer[T]
-	dstFirst *fixer.OverrideFixer[T]
+	srcFirst *fixer.OverrideFixer
+	dstFirst *fixer.OverrideFixer
 	topic    string
 }
 
-func NewConsumer[T migrator.Entity](
+func NewConsumer(
 	client sarama.Client,
 	l logger.Logger,
 	topic string,
 	src *gorm.DB,
-	dst *gorm.DB) (*Consumer[T], error) {
-	srcFirst, err := fixer.NewOverrideFixer[T](src, dst)
+	dst *gorm.DB) (*Consumer, error) {
+	srcFirst, err := fixer.NewOverrideFixer(src, dst)
 	if err != nil {
 		return nil, err
 	}
-	dstFirst, err := fixer.NewOverrideFixer[T](dst, src)
+	dstFirst, err := fixer.NewOverrideFixer(dst, src)
 	if err != nil {
 		return nil, err
 	}
-	return &Consumer[T]{
+	return &Consumer{
 		client:   client,
 		l:        l,
 		srcFirst: srcFirst,
@@ -45,7 +44,7 @@ func NewConsumer[T migrator.Entity](
 }
 
 // Start 这边就是自己启动 goroutine 了
-func (r *Consumer[T]) Start() error {
+func (r *Consumer) Start() error {
 	cg, err := sarama.NewConsumerGroupFromClient("migrator-fix",
 		r.client)
 	if err != nil {
@@ -62,7 +61,7 @@ func (r *Consumer[T]) Start() error {
 	return err
 }
 
-func (r *Consumer[T]) Consume(msg *sarama.ConsumerMessage, t events.InconsistentEvent) error {
+func (r *Consumer) Consume(msg *sarama.ConsumerMessage, t events.InconsistentEvent) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	switch t.Direction {

@@ -21,8 +21,3 @@ const (
 	InconsistentEventTypeNEQ         = "neq"
 	InconsistentEventTypeBaseMissing = "base_missing"
 )
-
-//type Fixer struct {
-//	base   *gorm.DB
-//	target *gorm.DB
-//}

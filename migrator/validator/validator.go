@@ -13,7 +13,7 @@ import (
 )
 
 // Validator T 必须实现了 Entity 接口
-type Validator[T migrator.Entity] struct {
+type Validator struct {
 	// 校验，以 XXX 为准，
 	base *gorm.DB
 	// 校验的是谁的数据
@@ -45,37 +45,37 @@ func NewValidator[T migrator.Entity](
 	target *gorm.DB,
 	direction string,
 	l logger.Logger,
-	p events.Producer) *Validator[T] {
+	p events.Producer) *Validator {
 	highLoad := atomicx.NewValueOf[bool](false)
 	go func() {
 		// 在这里，去查询数据库的状态
 		// 你的校验代码不太可能是性能瓶颈，性能瓶颈一般在数据库
 		// 你也可以结合本地的 CPU，内存负载来判定
 	}()
-	res := &Validator[T]{base: base, target: target,
+	res := &Validator{base: base, target: target,
 		l: l, p: p, direction: direction,
 		highLoad: highLoad}
 	res.fromBase = res.fullFromBase
 	return res
 }
 
-func (v *Validator[T]) SleepInterval(i time.Duration) *Validator[T] {
+func (v *Validator) SleepInterval(i time.Duration) *Validator {
 	v.sleepInterval = i
 	return v
 
 }
 
-func (v *Validator[T]) Utime(utime int64) *Validator[T] {
+func (v *Validator) Utime(utime int64) *Validator {
 	v.utime = utime
 	return v
 }
 
-func (v *Validator[T]) Incr() *Validator[T] {
+func (v *Validator) Incr() *Validator {
 	v.fromBase = v.intrFromBase
 	return v
 }
 
-func (v *Validator[T]) Validate(ctx context.Context) error {
+func (v *Validator) Validate(ctx context.Context) error {
 	var eg errgroup.Group
 	eg.Go(func() error {
 		v.validateBaseToTarget(ctx)
@@ -98,7 +98,7 @@ func (v *Validator[T]) Validate(ctx context.Context) error {
 // utime 上面至少要有一个索引，并且 utime 必须是第一列
 // <utime, col1, col2>, <utime> 这种可以
 // <col1, utime> 这种就不可以
-func (v *Validator[T]) validateBaseToTarget(ctx context.Context) {
+func (v *Validator) validateBaseToTarget(ctx context.Context) {
 	offset := 0
 	for {
 		//
